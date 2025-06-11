@@ -48,7 +48,7 @@ Frontend (PHP) --> API Client --> REST API (Node.js) --> Database (MySQL)
 define('API_BASE_URL', 'http://localhost:3000/api');
 
 // Frontend Configuration
-define('FRONTEND_BASE_URL', 'http://localhost:8080');
+define('FRONTEND_BASE_URL', 'http://localhost/pengaduan/frontend');
 
 // Upload Configuration
 define('UPLOAD_MAX_SIZE', 5 * 1024 * 1024); // 5MB
@@ -288,10 +288,3 @@ define('API_BASE_URL', 'http://localhost:3000/api');
 // PostgreSQL Server (Analytics)
 define('PG_API_BASE_URL', 'http://localhost:3001/api');
 ```
-
-## Usage
-
-The frontend automatically uses both servers:
-
-- **Main operations** → MySQL server
-- **Logging/Analytics** → PostgreSQL server (background)

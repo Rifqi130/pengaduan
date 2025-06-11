@@ -4,14 +4,16 @@
  * Adjust these settings based on your environment
  */
 
-// API Configuration - MySQL Server (Main) - Update for GCP deployment
-define('API_BASE_URL', 'http://34.121.164.196:3000/api');
+// API Configuration - MySQL Server (Main) - Updated to localhost
+define('API_BASE_URL', 'http://localhost:3000/api');
 
-// API Configuration - PostgreSQL Server (Analytics/Logs) - Update for GCP deployment
-define('PG_API_BASE_URL', 'http://34.121.164.196:3001/api');
+// API Configuration - PostgreSQL Server (Analytics/Logs) - Updated to localhost
+define('PG_API_BASE_URL', 'http://localhost:3001/api');
 
-// Frontend Configuration - Update for GCP deployment
-define('FRONTEND_BASE_URL', 'http://34.121.164.196/pengaduan/frontend');
+define('FRONTEND_BASE_URL', 'http://localhost:8080');
+
+// Frontend Configuration - Updated to localhost
+# define('FRONTEND_BASE_URL', 'http://localhost/pengaduan/frontend');
 
 // Upload Configuration
 define('UPLOAD_MAX_SIZE', 5 * 1024 * 1024); // 5MB in bytes

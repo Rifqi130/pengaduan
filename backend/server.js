@@ -3,78 +3,121 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-// const morgan = require("morgan"); // Commented out temporarily
 const path = require("path");
-
-// Import database connections
-const { testConnection, syncModels } = require("./models");
-const { testPgConnection, syncPgModels } = require("./models/postgres");
-
-// Import routes
-const authRoutes = require("./routes/auth");
-const complaintRoutes = require("./routes/complaints");
-const userRoutes = require("./routes/users");
-const adminRoutes = require("./routes/admin");
-const categoryRoutes = require("./routes/categories");
-const fileRoutes = require("./routes/files");
 
 const app = express();
 
 // Security middleware
-app.use(helmet());
-
-// CORS configuration
-const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim()) : [process.env.FRONTEND_URL || "http://localhost:5173"];
-
 app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        console.log("Blocked by CORS:", origin);
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+  helmet({
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: false,
   })
 );
 
-// Logging middleware
-// if (process.env.NODE_ENV === "development") {
-//   app.use(morgan("dev"));
-// }
+// CORS configuration
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (origin.includes("localhost") || origin.includes("127.0.0.1") || origin.includes("34.121.164.196")) {
+        return callback(null, true);
+      }
+      const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim()) : [process.env.FRONTEND_URL || "http://localhost:5173"];
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        return callback(null, true);
+      }
+      callback(null, true); // Allow all for development
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
+    optionsSuccessStatus: 200,
+  })
+);
 
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// Static file serving
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// Static file serving with CORS headers
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"), {
+    setHeaders: (res, path) => {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "GET");
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    },
+  })
+);
 
 // Health check endpoint
-app.get("/api/health", (req, res) => {
-  res.json({
-    status: "success",
-    message: "MySQL Server is running",
-    timestamp: new Date().toISOString(),
-    server: "mysql",
-    port: process.env.PORT || 3000,
-  });
+app.get("/api/health", async (req, res) => {
+  try {
+    // Import here to avoid circular dependency issues
+    const { testConnection } = require("./config/database");
+    const { testPgConnection } = require("./config/database");
+
+    let mysqlStatus = false;
+    let postgresStatus = false;
+
+    try {
+      mysqlStatus = await testConnection();
+    } catch (error) {
+      console.error("MySQL health check failed:", error.message);
+    }
+
+    try {
+      postgresStatus = await testPgConnection();
+    } catch (error) {
+      console.error("PostgreSQL health check failed:", error.message);
+    }
+
+    res.json({
+      status: "success",
+      message: "Dual Server is running",
+      timestamp: new Date().toISOString(),
+      databases: {
+        mysql: {
+          status: mysqlStatus ? "connected" : "disconnected",
+          role: "primary",
+        },
+        postgresql: {
+          status: postgresStatus ? "connected" : "disconnected",
+          role: "backup",
+        },
+      },
+      port: process.env.PORT || 3000,
+    });
+  } catch (error) {
+    console.error("Health check error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Health check failed",
+      error: error.message,
+    });
+  }
 });
 
-// API routes
-app.use("/api/auth", authRoutes);
-app.use("/api/complaints", complaintRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/categories", categoryRoutes);
-app.use("/api/files", fileRoutes);
+// Import and setup routes
+try {
+  const authRoutes = require("./routes/auth");
+  const complaintRoutes = require("./routes/complaints");
+  const userRoutes = require("./routes/users");
+  const adminRoutes = require("./routes/admin");
+  const categoryRoutes = require("./routes/categories");
+  const fileRoutes = require("./routes/files");
+
+  app.use("/api/auth", authRoutes);
+  app.use("/api/complaints", complaintRoutes);
+  app.use("/api/users", userRoutes);
+  app.use("/api/admin", adminRoutes);
+  app.use("/api/categories", categoryRoutes);
+  app.use("/api/files", fileRoutes);
+} catch (error) {
+  console.error("❌ Error loading routes:", error.message);
+}
 
 // 404 handler
 app.use("*", (req, res) => {
@@ -89,7 +132,14 @@ app.use("*", (req, res) => {
 app.use((err, req, res, next) => {
   console.error("Error:", err);
 
-  // Sequelize validation errors
+  if (err.message === "Not allowed by CORS") {
+    return res.status(403).json({
+      status: "error",
+      message: "CORS policy violation",
+      code: "CORS_ERROR",
+    });
+  }
+
   if (err.name === "SequelizeValidationError") {
     return res.status(400).json({
       status: "error",
@@ -101,7 +151,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Sequelize unique constraint errors
   if (err.name === "SequelizeUniqueConstraintError") {
     return res.status(400).json({
       status: "error",
@@ -120,64 +169,91 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start MySQL server
-const startMySQLServer = async () => {
+// Start server with improved error handling
+const startServer = async () => {
   try {
-    // Test database connection
-    const isConnected = await testConnection();
-    if (!isConnected) {
-      console.error("❌ Failed to connect to MySQL database");
-      process.exit(1);
+    console.log("🚀 Starting dual database server application...");
+
+    // Import database connections
+    const { testConnection, syncModels } = require("./models");
+    const { testPgConnection, syncPgModels } = require("./models/postgres");
+
+    let mysqlConnected = false;
+    let postgresConnected = false;
+
+    // Test MySQL connection
+    try {
+      mysqlConnected = await testConnection();
+      if (mysqlConnected) {
+        console.log("✅ MySQL database connected");
+        await syncModels();
+        console.log("✅ MySQL models synchronized");
+      } else {
+        console.error("❌ Failed to connect to MySQL database (primary)");
+      }
+    } catch (error) {
+      console.error("❌ MySQL connection error:", error.message);
     }
 
-    // Sync models
-    await syncModels();
+    // Test PostgreSQL connection (optional)
+    try {
+      postgresConnected = await testPgConnection();
+      if (postgresConnected) {
+        console.log("✅ PostgreSQL database connected");
+        await syncPgModels();
+        console.log("✅ PostgreSQL models synchronized");
+
+        // Initialize database sync only if both databases are connected
+        if (mysqlConnected) {
+          try {
+            const { initializeDatabaseSync } = require("./services/databaseSync");
+            await initializeDatabaseSync();
+            console.log("✅ Database synchronization service started");
+          } catch (syncError) {
+            console.error("❌ Database sync service error:", syncError.message);
+          }
+        }
+      } else {
+        console.warn("⚠️  PostgreSQL backup database not available");
+      }
+    } catch (error) {
+      console.warn("⚠️  PostgreSQL connection warning:", error.message);
+    }
 
     const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
-      console.log(`🚀 MySQL Server running on port ${PORT}`);
+    const server = app.listen(PORT, "0.0.0.0", () => {
+      console.log(`🚀 Dual Database Server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
-      console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || "http://localhost:5173"}`);
+      console.log(`🔗 Server URL: http://localhost:${PORT}`);
+      console.log(`🗄️  Primary DB: MySQL ${mysqlConnected ? "✅" : "❌"}`);
+      console.log(`🗄️  Backup DB: PostgreSQL ${postgresConnected ? "✅" : "❌"}`);
+
+      if (!mysqlConnected) {
+        console.log("\n🔧 To fix MySQL connection:");
+        console.log("1. Make sure XAMPP MySQL service is running");
+        console.log("2. Database will be created automatically");
+        console.log("3. Check your .env file configuration");
+      }
+
+      if (!postgresConnected) {
+        console.log("\n🔧 PostgreSQL is optional for basic functionality");
+        console.log("1. Install PostgreSQL if you want backup database");
+        console.log("2. Update .env with correct PostgreSQL credentials");
+      }
+    });
+
+    process.on("SIGTERM", () => {
+      console.log("SIGTERM received, shutting down gracefully");
+      server.close(() => {
+        console.log("Process terminated");
+      });
     });
   } catch (error) {
-    console.error("❌ Failed to start MySQL server:", error);
-    process.exit(1);
+    console.error("❌ Failed to start server:", error);
+    console.log("🔄 Server will continue with limited functionality...");
   }
 };
 
-// Start PostgreSQL server
-const startPostgreSQLServer = async () => {
-  try {
-    console.log("🔄 Starting PostgreSQL server...");
-    const isConnected = await testPgConnection();
-    if (!isConnected) {
-      console.error("❌ Failed to connect to PostgreSQL database");
-      return;
-    }
-
-    await syncPgModels();
-    console.log("✅ PostgreSQL models synchronized");
-
-    // Import and start PostgreSQL server
-    require("./server-postgres");
-  } catch (error) {
-    console.error("❌ Failed to start PostgreSQL server:", error);
-  }
-};
-
-// Start both servers
-const startServers = async () => {
-  console.log("🚀 Starting dual server application...");
-
-  // Start MySQL server first
-  await startMySQLServer();
-
-  // Then start PostgreSQL server
-  await startPostgreSQLServer();
-
-  console.log("✅ Both servers started successfully");
-};
-
-startServers();
+startServer();
 
 module.exports = app;

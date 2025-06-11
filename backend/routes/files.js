@@ -3,6 +3,19 @@ const path = require("path");
 const fs = require("fs");
 const router = express.Router();
 
+// Add CORS middleware specifically for file routes
+router.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+
+  if (req.method === "OPTIONS") {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
 // Route untuk mengakses file lampiran
 router.get("/attachment/:filename", (req, res) => {
   try {
@@ -10,13 +23,27 @@ router.get("/attachment/:filename", (req, res) => {
 
     // Sanitize filename to prevent path traversal attacks
     const sanitizedFilename = path.basename(filename);
-    const filePath = path.join(__dirname, "../uploads/complaints", sanitizedFilename);
+    const uploadsDir = path.join(__dirname, "../uploads");
+
+    // Create uploads directory if it doesn't exist
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const complaintsDir = path.join(uploadsDir, "complaints");
+    if (!fs.existsSync(complaintsDir)) {
+      fs.mkdirSync(complaintsDir, { recursive: true });
+    }
+
+    const filePath = path.join(complaintsDir, sanitizedFilename);
 
     // Check if file exists
     if (!fs.existsSync(filePath)) {
+      console.log(`File not found: ${filePath}`);
       return res.status(404).json({
         status: "error",
         message: "File not found",
+        filepath: filePath,
       });
     }
 
@@ -30,6 +57,7 @@ router.get("/attachment/:filename", (req, res) => {
       ".jpeg": "image/jpeg",
       ".png": "image/png",
       ".gif": "image/gif",
+      ".webp": "image/webp",
       ".pdf": "application/pdf",
       ".doc": "application/msword",
       ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -37,16 +65,20 @@ router.get("/attachment/:filename", (req, res) => {
 
     const contentType = mimeTypes[ext] || "application/octet-stream";
 
-    // Set CORS headers for file access
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET");
+    // Set headers
     res.setHeader("Content-Type", contentType);
     res.setHeader("Content-Length", stats.size);
     res.setHeader("Content-Disposition", `inline; filename="${sanitizedFilename}"`);
-    res.setHeader("Cache-Control", "public, max-age=31536000"); // Cache for 1 year
+    res.setHeader("Cache-Control", "public, max-age=3600"); // Cache for 1 hour
 
-    // Stream file
+    // For images, set additional headers
+    if (contentType.startsWith("image/")) {
+      res.setHeader("X-Content-Type-Options", "nosniff");
+    }
+
+    // Stream file with error handling
     const fileStream = fs.createReadStream(filePath);
+
     fileStream.on("error", (err) => {
       console.error("Error streaming file:", err);
       if (!res.headersSent) {
@@ -60,10 +92,13 @@ router.get("/attachment/:filename", (req, res) => {
     fileStream.pipe(res);
   } catch (error) {
     console.error("Error serving file:", error);
-    res.status(500).json({
-      status: "error",
-      message: "Internal server error",
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        status: "error",
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
   }
 });
 

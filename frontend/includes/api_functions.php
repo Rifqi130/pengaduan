@@ -167,18 +167,6 @@ function submitComplaint($user_id, $title, $description, $category, $nama_pelapo
 {
     global $apiClient;
 
-    // Cek status user sebelum submit
-    if (isLoggedIn()) {
-        $userProfile = $apiClient->getCurrentUser();
-        if (
-            $userProfile['status_code'] !== 200 ||
-            empty($userProfile['data']['data']) ||
-            (isset($userProfile['data']['data']['is_active']) && !$userProfile['data']['data']['is_active'])
-        ) {
-            return "Akun Anda tidak aktif. Silakan hubungi admin.";
-        }
-    }
-
     $title = sanitizeData($title);
     $description = sanitizeData($description);
     $lokasi_kejadian = sanitizeData($lokasi_kejadian);
@@ -215,7 +203,27 @@ function submitComplaint($user_id, $title, $description, $category, $nama_pelapo
     if ($response['status_code'] === 201) {
         return true;
     } else {
-        return $response['data']['message'] ?? 'Unknown error';
+        // Handle specific error codes
+        $errorData = $response['data'] ?? [];
+        
+        if (isset($errorData['code'])) {
+            switch ($errorData['code']) {
+                case 'ACCOUNT_INACTIVE':
+                    return 'Akun Anda tidak aktif. Silakan hubungi admin untuk mengaktifkan akun.';
+                case 'NAMA_REQUIRED':
+                    return 'Nama pelapor wajib diisi jika menyertakan data diri.';
+                case 'EMAIL_REQUIRED':
+                    return 'Email pelapor wajib diisi jika menyertakan data diri.';
+                case 'CATEGORY_REQUIRED':
+                    return 'Kategori pengaduan wajib dipilih.';
+                case 'INVALID_CATEGORY':
+                    return 'Kategori yang dipilih tidak valid.';
+                default:
+                    return $errorData['message'] ?? 'Terjadi kesalahan tidak dikenal.';
+            }
+        }
+        
+        return $errorData['message'] ?? 'Unknown error';
     }
 }
 

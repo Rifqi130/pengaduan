@@ -326,28 +326,44 @@ else: ?>
         });
 
         document.querySelector('form').addEventListener('submit', function (event) {
-            let title = document.getElementById('title').value;
-            let description = document.getElementById('description').value;
+            let title = document.getElementById('title').value.trim();
+            let description = document.getElementById('description').value.trim();
             let tanggal_kejadian = document.getElementById('tanggal_kejadian').value;
-            let lokasi_kejadian = document.getElementById('lokasi_kejadian').value;
+            let lokasi_kejadian = document.getElementById('lokasi_kejadian').value.trim();
             let category = document.getElementById('category').value;
             let sertakanDataDiri = document.getElementById('sertakan_data_diri').checked;
-            let nama_pelapor = document.getElementById('nama_pelapor').value;
-            let email_pelapor = document.getElementById('email_pelapor').value;
+            let nama_pelapor = document.getElementById('nama_pelapor').value.trim();
+            let email_pelapor = document.getElementById('email_pelapor').value.trim();
+            
             let msg = '';
-            if (!title || !description || !tanggal_kejadian || !lokasi_kejadian || !category) {
-                msg = 'Mohon lengkapi semua field yang wajib diisi.';
-            } else if (sertakanDataDiri && (!nama_pelapor || !email_pelapor)) {
-                msg = 'Jika menyertakan data diri, Nama dan Email wajib diisi.';
-            } else if (sertakanDataDiri && email_pelapor) {
-                // Basic email format validation
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(email_pelapor)) {
-                    msg = 'Format email tidak valid.';
-                }
+            
+            // Validasi field wajib
+            if (!title) {
+                msg = 'Judul pengaduan wajib diisi.';
+            } else if (!description) {
+                msg = 'Deskripsi pengaduan wajib diisi.';
+            } else if (!tanggal_kejadian) {
+                msg = 'Tanggal kejadian wajib diisi.';
+            } else if (!lokasi_kejadian) {
+                msg = 'Lokasi kejadian wajib diisi.';
             } else if (!category) {
-                msg = 'Mohon pilih kategori pengaduan.';
+                msg = 'Kategori pengaduan wajib dipilih.';
+            } 
+            // Validasi data pribadi jika checkbox dicentang
+            else if (sertakanDataDiri) {
+                if (!nama_pelapor) {
+                    msg = 'Nama pelapor wajib diisi jika menyertakan data diri.';
+                } else if (!email_pelapor) {
+                    msg = 'Email pelapor wajib diisi jika menyertakan data diri.';
+                } else if (email_pelapor) {
+                    // Basic email format validation
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(email_pelapor)) {
+                        msg = 'Format email tidak valid.';
+                    }
+                }
             }
+            
             if (msg) {
                 event.preventDefault();
                 document.getElementById('complaintToastMsg').textContent = msg;

@@ -94,21 +94,21 @@ GET {{baseUrl}}/api/complaints?type=public&status=Baru&category=Fasilitas
 GET {{baseUrl}}/api/complaints
 Authorization: Bearer {{token}}
 
-### Submit Anonymous Complaint (No Data Diri)
+### Submit Anonymous Complaint (No Data Diri) - No Auth Required
 POST {{baseUrl}}/api/complaints
 Content-Type: {{contentType}}
 
 {
   "title": "Pengaduan Anonim Test",
   "description": "Ini adalah pengaduan anonim untuk testing API",
-  "category": "Fasilitas",
+  "category": "Fasilitas", 
   "tanggal_kejadian": "2025-01-15",
   "lokasi_kejadian": "Gedung A Lantai 1",
   "tipe_aduan": "public",
   "sertakan_data_diri": false
 }
 
-### Submit Complaint with Personal Data
+### Submit Complaint with Personal Data - Auth Required
 POST {{baseUrl}}/api/complaints
 Content-Type: {{contentType}}
 Authorization: Bearer {{token}}
@@ -117,7 +117,7 @@ Authorization: Bearer {{token}}
   "title": "Pengaduan dengan Data Diri",
   "description": "Ini adalah pengaduan lengkap dengan data diri pelapor untuk testing API",
   "category": "Akademik",
-  "tanggal_kejadian": "2025-01-15",
+  "tanggal_kejadian": "2025-01-15", 
   "lokasi_kejadian": "Ruang Kuliah B.201",
   "tipe_aduan": "private",
   "sertakan_data_diri": true,
@@ -126,6 +126,38 @@ Authorization: Bearer {{token}}
   "nim": "202312345",
   "whatsapp": "081234567890",
   "email_pelapor": "testuser@example.com"
+}
+
+### Test 422 - Missing Personal Data when sertakan_data_diri is true
+POST {{baseUrl}}/api/complaints
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "title": "Pengaduan Test Validasi",
+  "description": "Testing validasi data pribadi",
+  "category": "Fasilitas",
+  "tanggal_kejadian": "2025-01-15",
+  "lokasi_kejadian": "Test Location",
+  "tipe_aduan": "private",
+  "sertakan_data_diri": true,
+  "nama_pelapor": "",
+  "email_pelapor": ""
+}
+
+### Test 403 - Inactive User Account
+POST {{baseUrl}}/api/complaints
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "title": "Test Inactive User",
+  "description": "Testing with inactive user account",
+  "category": "Fasilitas",
+  "tanggal_kejadian": "2025-01-15",
+  "lokasi_kejadian": "Test Location",
+  "tipe_aduan": "private",
+  "sertakan_data_diri": false
 }
 
 ### Submit Complaint with File Upload (multipart/form-data)

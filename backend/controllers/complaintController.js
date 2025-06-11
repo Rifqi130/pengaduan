@@ -89,7 +89,52 @@ class ComplaintController {
       // Gunakan category dari middleware
       const categoryObj = req.categoryObj;
 
-      const userId = req.user ? req.user.id : null; // Null for anonymous
+      // Handle both authenticated and anonymous submissions
+      const userId = req.user ? req.user.id : null;
+
+      // Jika user sudah login, cek status aktif
+      if (req.user) {
+        const { User } = require("../models");
+        const user = await User.findByPk(req.user.id);
+
+        if (!user) {
+          return res.status(401).json({
+            status: "error",
+            message: "User not found",
+            code: "USER_NOT_FOUND",
+          });
+        }
+
+        if (!user.is_active) {
+          return res.status(403).json({
+            status: "error",
+            message: "Akun Anda tidak aktif. Silakan hubungi admin.",
+            code: "ACCOUNT_INACTIVE",
+          });
+        }
+      }
+
+      // Validasi data pribadi jika diperlukan
+      const includePersonalData = sertakan_data_diri === true || sertakan_data_diri === "true";
+
+      if (includePersonalData) {
+        if (!nama_pelapor || nama_pelapor.trim() === "") {
+          return res.status(422).json({
+            status: "error",
+            message: "Nama pelapor wajib diisi jika menyertakan data diri",
+            code: "NAMA_REQUIRED",
+          });
+        }
+
+        if (!email_pelapor || email_pelapor.trim() === "") {
+          return res.status(422).json({
+            status: "error",
+            message: "Email pelapor wajib diisi jika menyertakan data diri",
+            code: "EMAIL_REQUIRED",
+          });
+        }
+      }
+
       const lampiran = req.file ? req.file.filename : null;
       const lampiranPath = req.file ? req.file.path : null;
 
@@ -99,11 +144,11 @@ class ComplaintController {
         category_id: categoryObj.id,
         title,
         description,
-        nama_pelapor: sertakan_data_diri ? nama_pelapor : null,
-        jenis_kelamin: sertakan_data_diri ? jenis_kelamin : null,
-        nim: sertakan_data_diri ? nim : null,
-        whatsapp: sertakan_data_diri ? whatsapp : null,
-        email_pelapor: sertakan_data_diri ? email_pelapor : null,
+        nama_pelapor: includePersonalData ? nama_pelapor : null,
+        jenis_kelamin: includePersonalData ? jenis_kelamin : null,
+        nim: includePersonalData ? nim : null,
+        whatsapp: includePersonalData ? whatsapp : null,
+        email_pelapor: includePersonalData ? email_pelapor : null,
         tanggal_kejadian,
         lokasi_kejadian,
         lampiran,

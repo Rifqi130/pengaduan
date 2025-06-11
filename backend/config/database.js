@@ -1,21 +1,16 @@
 const { Sequelize } = require("sequelize");
 require("dotenv").config();
 
-// Koneksi utama (MySQL)
-const sequelize = new Sequelize({
+// MySQL configuration - Fixed with better timeout handling
+const sequelize = new Sequelize(process.env.DB_NAME || "pengaduan_mahasiswa", process.env.DB_USER || "root", process.env.DB_PASSWORD || "", {
   host: process.env.DB_HOST || "localhost",
-  port: process.env.DB_PORT || 3306,
-  database: process.env.DB_NAME || "pengaduan_mahasiswa",
-  username: process.env.DB_USER || "root",
-  password: process.env.DB_PASS || "",
   dialect: "mysql",
-  charset: "utf8mb4",
-  collate: "utf8mb4_unicode_ci",
+  port: process.env.DB_PORT || 3306,
   logging: process.env.NODE_ENV === "development" ? console.log : false,
   pool: {
-    max: 10,
+    max: 5,
     min: 0,
-    acquire: 60000, // Increased timeout for GCP
+    acquire: 60000, // Increased to 60 seconds
     idle: 10000,
   },
   dialectOptions: {
@@ -23,85 +18,72 @@ const sequelize = new Sequelize({
     acquireTimeout: 60000,
     timeout: 60000,
   },
-  retry: {
-    match: [/ETIMEDOUT/, /EHOSTUNREACH/, /ECONNRESET/, /ECONNREFUSED/, /ENOTFOUND/, /EAI_AGAIN/],
-    max: 3,
-  },
-  timezone: "+07:00",
   define: {
-    timestamps: true,
-    underscored: false,
-    freezeTableName: true,
+    charset: "utf8mb4",
+  },
+  retry: {
+    match: [/ETIMEDOUT/, /EHOSTUNREACH/, /ECONNRESET/, /ECONNREFUSED/, /TIMEOUT/],
+    max: 3,
   },
 });
 
-// Koneksi kedua (PostgreSQL)
-const sequelizePg = new Sequelize(process.env.PG_DB_NAME || "pengaduan_mahasiswa", process.env.PG_DB_USER || "postgres", process.env.PG_DB_PASS || "", {
+// PostgreSQL configuration - Fixed password handling
+const sequelizePg = new Sequelize(process.env.PG_DB_NAME || "pengaduan_logs", process.env.PG_DB_USER || "postgres", process.env.PG_DB_PASSWORD || "", {
   host: process.env.PG_DB_HOST || "localhost",
-  port: process.env.PG_DB_PORT || 5432,
   dialect: "postgres",
-  logging: process.env.NODE_ENV === "development" ? console.log : false,
+  port: process.env.PG_DB_PORT || 5432,
+  logging: false,
   pool: {
-    max: 10,
+    max: 5,
     min: 0,
-    acquire: 60000, // Increased timeout for GCP
+    acquire: 30000,
     idle: 10000,
   },
-  dialectOptions: {
-    connectTimeout: 60000,
-    requestTimeout: 60000,
-  },
-  retry: {
-    match: [/ETIMEDOUT/, /EHOSTUNREACH/, /ECONNRESET/, /ECONNREFUSED/, /ENOTFOUND/, /EAI_AGAIN/],
-    max: 3,
-  },
-  timezone: "+07:00",
-  define: {
-    timestamps: true,
-    underscored: false,
-    freezeTableName: true,
-  },
 });
 
-// Test database connection with retry
-const testConnection = async (retries = 3) => {
-  for (let i = 0; i < retries; i++) {
-    try {
-      await sequelize.authenticate();
-      console.log("✅ MySQL Database connected successfully");
-      return true;
-    } catch (error) {
-      console.error(`❌ MySQL connection attempt ${i + 1} failed:`, error.message);
-      if (i < retries - 1) {
-        console.log(`⏳ Retrying in 5 seconds...`);
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+// Test MySQL connection with better error handling
+const testConnection = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log("✅ MySQL database connection has been established successfully.");
+    return true;
+  } catch (error) {
+    console.error("❌ Unable to connect to MySQL database:", error.message);
+
+    // If database doesn't exist, try to create it
+    if (error.message.includes("Unknown database")) {
+      console.log("🔄 Attempting to create MySQL database...");
+      try {
+        const { createDatabase } = require("../utils/createDatabase");
+        await createDatabase();
+        // Retry connection
+        await sequelize.authenticate();
+        console.log("✅ MySQL database created and connected successfully.");
+        return true;
+      } catch (createError) {
+        console.error("❌ Failed to create database:", createError.message);
+        return false;
       }
     }
+    return false;
   }
-  return false;
 };
 
-// Test koneksi PostgreSQL with retry
-const testPgConnection = async (retries = 3) => {
-  for (let i = 0; i < retries; i++) {
-    try {
-      await sequelizePg.authenticate();
-      console.log("✅ PostgreSQL connected successfully");
-      return true;
-    } catch (error) {
-      console.error(`❌ PostgreSQL connection attempt ${i + 1} failed:`, error.message);
-      if (i < retries - 1) {
-        console.log(`⏳ Retrying in 5 seconds...`);
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-      }
-    }
+// Test PostgreSQL connection with better error handling
+const testPgConnection = async () => {
+  try {
+    await sequelizePg.authenticate();
+    console.log("✅ PostgreSQL database connection has been established successfully.");
+    return true;
+  } catch (error) {
+    console.warn("⚠️  PostgreSQL database connection failed:", error.message);
+    return false;
   }
-  return false;
 };
 
 module.exports = {
-  sequelize, // MySQL
-  sequelizePg, // PostgreSQL
-  testConnection, // Test MySQL
-  testPgConnection, // Test PostgreSQL
+  sequelize,
+  sequelizePg,
+  testConnection,
+  testPgConnection,
 };

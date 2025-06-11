@@ -7,6 +7,33 @@ const { Category } = require("../models");
 const sequelize = require("sequelize");
 const router = express.Router();
 
+// Optional authentication middleware (allows both authenticated and anonymous users)
+const optionalAuth = async (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (token) {
+    try {
+      const jwt = require("jsonwebtoken");
+      const { User } = require("../models");
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findByPk(decoded.userId, {
+        attributes: { exclude: ["password"] },
+      });
+
+      if (user) {
+        req.user = user;
+      }
+    } catch (error) {
+      // Silently continue without user if token is invalid
+      console.log("Optional auth failed:", error.message);
+    }
+  }
+
+  next();
+};
+
 // Dynamic category validation middleware
 const validateCategory = async (req, res, next) => {
   let categoryName = req.body.category;
@@ -55,15 +82,16 @@ const complaintValidation = [
 ];
 
 // Routes
-router.get("/", ComplaintController.getComplaints);
+router.get("/", optionalAuth, ComplaintController.getComplaints);
 router.post(
   "/",
+  optionalAuth, // Use optional auth instead of required auth
   upload.single("lampiran"),
   complaintValidation,
-  validateCategory, // tambahkan middleware ini setelah complaintValidation
+  validateCategory,
   ComplaintController.submitComplaint
 );
-router.get("/:id", ComplaintController.getComplaintById);
+router.get("/:id", optionalAuth, ComplaintController.getComplaintById);
 router.put("/:id/status", authenticateToken, requireAdmin, ComplaintController.updateComplaintStatus);
 router.delete("/:id", authenticateToken, requireAdmin, ComplaintController.deleteComplaint);
 

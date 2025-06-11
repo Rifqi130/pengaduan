@@ -1,72 +1,64 @@
 const { sequelizePg } = require("../../config/database");
-const ComplaintLog = require("./ComplaintLog");
-const UserActivity = require("./UserActivity");
-const SystemAnalytics = require("./SystemAnalytics");
+const { initComplaintLog } = require("./ComplaintLog");
 
-// Define associations
-// ComplaintLog and UserActivity are related by user_id but not a direct foreign key relationship
-// since they reference MySQL user IDs
+let models = {};
 
-// Sync PostgreSQL models
-const syncPgModels = async () => {
+const initializePostgresModels = () => {
   try {
-    await sequelizePg.sync({ alter: true });
-    console.log("✅ PostgreSQL models synchronized");
-
-    // Seed initial analytics data
-    const analyticsCount = await SystemAnalytics.count();
-    if (analyticsCount === 0) {
-      await SystemAnalytics.bulkCreate([
-        {
-          metric_name: "total_complaints",
-          metric_value: 0,
-          metric_type: "counter",
-          description: "Total number of complaints submitted",
-        },
-        {
-          metric_name: "active_users",
-          metric_value: 0,
-          metric_type: "gauge",
-          description: "Number of active users",
-        },
-        {
-          metric_name: "pending_complaints",
-          metric_value: 0,
-          metric_type: "gauge",
-          description: "Number of pending complaints",
-        },
-        {
-          metric_name: "resolved_complaints",
-          metric_value: 0,
-          metric_type: "counter",
-          description: "Number of resolved complaints",
-        },
-      ]);
-      console.log("✅ PostgreSQL initial analytics data seeded");
+    if (!sequelizePg) {
+      console.warn("⚠️  PostgreSQL sequelize instance not available");
+      return {};
     }
+
+    // Initialize models
+    models.ComplaintLog = initComplaintLog(sequelizePg);
+
+    console.log("✅ PostgreSQL models initialized successfully");
+    return models;
   } catch (error) {
-    console.error("❌ Failed to sync PostgreSQL models:", error.message);
-    throw error;
+    console.error("❌ Error initializing PostgreSQL models:", error.message);
+    return {};
   }
 };
 
-// Test PostgreSQL connection
-const testPgConnection = async () => {
+const syncPgModels = async () => {
   try {
-    await sequelizePg.authenticate();
-    console.log("✅ PostgreSQL database connection verified");
+    if (!sequelizePg) {
+      console.warn("⚠️  PostgreSQL not available for sync");
+      return false;
+    }
+
+    // Initialize models first
+    initializePostgresModels();
+
+    // Sync database
+    await sequelizePg.sync({ alter: true });
+    console.log("✅ PostgreSQL models synced successfully");
     return true;
   } catch (error) {
-    console.error("❌ PostgreSQL connection failed:", error.message);
+    console.error("❌ PostgreSQL sync error:", error.message);
+    return false;
+  }
+};
+
+const testPgConnection = async () => {
+  try {
+    if (!sequelizePg) {
+      throw new Error("PostgreSQL sequelize instance not available");
+    }
+
+    await sequelizePg.authenticate();
+    return true;
+  } catch (error) {
+    console.warn("⚠️  PostgreSQL connection test failed:", error.message);
     return false;
   }
 };
 
 module.exports = {
   sequelizePg,
-  ComplaintLog,
-  UserActivity,
-  SystemAnalytics,
+  models,
+  initializePostgresModels,
   syncPgModels,
   testPgConnection,
 };

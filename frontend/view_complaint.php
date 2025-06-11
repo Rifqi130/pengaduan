@@ -38,25 +38,30 @@ if ($complaint_id) {
                     <div class="mt-2">
                         <?php 
                         $filename = $complaint['lampiran'];
-                        $fileUrl = getFileUrl($filename);
+                        
+                        // Try multiple file URL approaches
+                        $backendFileUrl = "http://34.121.164.196:3000/api/files/attachment/" . urlencode($filename);
+                        $localFileUrl = "../backend/uploads/complaints/" . urlencode($filename);
+                        $fallbackUrl = "uploads/complaints/" . urlencode($filename);
                         
                         if (isImageFile($filename)): ?>
-                            <!-- Display image -->
+                            <!-- Display image with fallback URLs -->
                             <div class="card" style="max-width: 500px;">
-                                <img src="<?php echo htmlspecialchars($fileUrl); ?>" 
+                                <img src="<?php echo htmlspecialchars($backendFileUrl); ?>" 
                                      class="card-img-top" 
                                      alt="Lampiran"
                                      style="max-height: 400px; object-fit: contain;"
-                                     onclick="openImageModal('<?php echo htmlspecialchars($fileUrl); ?>')">
+                                     onclick="openImageModal('<?php echo htmlspecialchars($backendFileUrl); ?>')"
+                                     onerror="this.onerror=null; this.src='<?php echo htmlspecialchars($localFileUrl); ?>'; if(this.onerror) this.src='<?php echo htmlspecialchars($fallbackUrl); ?>';">
                                 <div class="card-body p-2">
                                     <small class="text-muted"><?php echo htmlspecialchars($filename); ?></small>
                                     <br>
-                                    <a href="<?php echo htmlspecialchars($fileUrl); ?>" 
+                                    <a href="<?php echo htmlspecialchars($backendFileUrl); ?>" 
                                        target="_blank" 
                                        class="btn btn-sm btn-outline-primary">
                                         <i class="fas fa-external-link-alt"></i> Buka di tab baru
                                     </a>
-                                    <a href="<?php echo htmlspecialchars($fileUrl); ?>" 
+                                    <a href="<?php echo htmlspecialchars($backendFileUrl); ?>" 
                                        download="<?php echo htmlspecialchars($filename); ?>"
                                        class="btn btn-sm btn-outline-success">
                                         <i class="fas fa-download"></i> Download
@@ -73,12 +78,12 @@ if ($complaint_id) {
                                         <?php echo htmlspecialchars($filename); ?>
                                     </h6>
                                     <div class="btn-group" role="group">
-                                        <a href="<?php echo htmlspecialchars($fileUrl); ?>" 
+                                        <a href="<?php echo htmlspecialchars($backendFileUrl); ?>" 
                                            target="_blank" 
                                            class="btn btn-outline-primary">
                                             <i class="fas fa-eye"></i> Lihat PDF
                                         </a>
-                                        <a href="<?php echo htmlspecialchars($fileUrl); ?>" 
+                                        <a href="<?php echo htmlspecialchars($backendFileUrl); ?>" 
                                            download="<?php echo htmlspecialchars($filename); ?>"
                                            class="btn btn-outline-success">
                                             <i class="fas fa-download"></i> Download
@@ -96,12 +101,12 @@ if ($complaint_id) {
                                         <?php echo htmlspecialchars($filename); ?>
                                     </h6>
                                     <div class="btn-group" role="group">
-                                        <a href="<?php echo htmlspecialchars($fileUrl); ?>" 
+                                        <a href="<?php echo htmlspecialchars($backendFileUrl); ?>" 
                                            target="_blank" 
                                            class="btn btn-outline-primary">
                                             <i class="fas fa-external-link-alt"></i> Buka
                                         </a>
-                                        <a href="<?php echo htmlspecialchars($fileUrl); ?>" 
+                                        <a href="<?php echo htmlspecialchars($backendFileUrl); ?>" 
                                            download="<?php echo htmlspecialchars($filename); ?>"
                                            class="btn btn-outline-success">
                                             <i class="fas fa-download"></i> Download
@@ -118,7 +123,7 @@ if ($complaint_id) {
                                         <i class="fas fa-file"></i>
                                         <?php echo htmlspecialchars($filename); ?>
                                     </h6>
-                                    <a href="<?php echo htmlspecialchars($fileUrl); ?>" 
+                                    <a href="<?php echo htmlspecialchars($backendFileUrl); ?>" 
                                        download="<?php echo htmlspecialchars($filename); ?>"
                                        class="btn btn-outline-success">
                                         <i class="fas fa-download"></i> Download
@@ -218,7 +223,22 @@ include 'includes/footer.php';
 
 <script>
 function openImageModal(imageUrl) {
-    document.getElementById('modalImage').src = imageUrl;
+    // Create fallback URLs for modal
+    const backendUrl = imageUrl;
+    const localUrl = imageUrl.replace('http://34.121.164.196:3000/api/files/attachment/', '../backend/uploads/complaints/');
+    const fallbackUrl = imageUrl.replace('http://34.121.164.196:3000/api/files/attachment/', 'uploads/complaints/');
+    
+    const modalImage = document.getElementById('modalImage');
+    modalImage.src = backendUrl;
+    modalImage.onerror = function() {
+        this.onerror = null;
+        this.src = localUrl;
+        this.onerror = function() {
+            this.onerror = null;
+            this.src = fallbackUrl;
+        };
+    };
+    
     var modal = new bootstrap.Modal(document.getElementById('imageModal'));
     modal.show();
 }

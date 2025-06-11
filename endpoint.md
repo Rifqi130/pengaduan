@@ -5,15 +5,19 @@ Berdasarkan analisis kode dalam workspace Anda, berikut adalah endpoint REST API
 ### **1. Authentication Endpoints**
 
 #### `POST /api/auth/register`
+
 **Request:**
+
 ```json
 {
   "username": "string",
-  "email": "string", 
+  "email": "string",
   "password": "string"
 }
 ```
+
 **Response (201):**
+
 ```json
 {
   "status": "success",
@@ -28,7 +32,9 @@ Berdasarkan analisis kode dalam workspace Anda, berikut adalah endpoint REST API
 ```
 
 #### `POST /api/auth/login`
+
 **Request:**
+
 ```json
 {
   "username": "string",
@@ -36,7 +42,9 @@ Berdasarkan analisis kode dalam workspace Anda, berikut adalah endpoint REST API
   "role": "mahasiswa|admin"
 }
 ```
+
 **Response (200):**
+
 ```json
 {
   "status": "success",
@@ -53,7 +61,9 @@ Berdasarkan analisis kode dalam workspace Anda, berikut adalah endpoint REST API
 ```
 
 #### `POST /api/auth/logout`
+
 **Response (200):**
+
 ```json
 {
   "status": "success",
@@ -62,34 +72,39 @@ Berdasarkan analisis kode dalam workspace Anda, berikut adalah endpoint REST API
 ```
 
 ### **2. Complaint Endpoints**
+
 #### `GET /api/complaints`
+
 **Query Parameters:** `?type=public|private&status=Baru|Diproses|Selesai|Ditolak`
 **Response (200):**
+
 ```json
 {
-    "status": "success",
-    "data": {
-        "complaints": [
-            {
-                "id": 1,
-                "title": "Fasilitas Kelas Tidak Lengkap",
-                "description": "Proyektor di kelas A.101 rusak...",
-                "category": "Fasilitas",
-                "status": "Baru",
-                "tipe_aduan": "private",
-                "tanggal_kejadian": "2025-05-30",
-                "lokasi_kejadian": "Kelas A.101",
-                "nama_pelapor": "Mahasiswa Satu",
-                "date_posted": "2025-06-01 10:30:00",
-                "last_updated": "2025-06-01 10:30:00"
-            }
-        ]
-    }
+  "status": "success",
+  "data": {
+    "complaints": [
+      {
+        "id": 1,
+        "title": "Fasilitas Kelas Tidak Lengkap",
+        "description": "Proyektor di kelas A.101 rusak...",
+        "category": "Fasilitas",
+        "status": "Baru",
+        "tipe_aduan": "private",
+        "tanggal_kejadian": "2025-05-30",
+        "lokasi_kejadian": "Kelas A.101",
+        "nama_pelapor": "Mahasiswa Satu",
+        "date_posted": "2025-06-01 10:30:00",
+        "last_updated": "2025-06-01 10:30:00"
+      }
+    ]
+  }
 }
 ```
 
 #### `POST /api/complaints`
+
 **Request (multipart/form-data):**
+
 ```json
 {
   "title": "string",
@@ -99,15 +114,17 @@ Berdasarkan analisis kode dalam workspace Anda, berikut adalah endpoint REST API
   "lokasi_kejadian": "string",
   "tipe_aduan": "private|public",
   "sertakan_data_diri": true,
-  "nama_pelapor": "string",
-  "jenis_kelamin": "Laki-laki|Perempuan",
-  "nim": "string",
-  "whatsapp": "string",
-  "email_pelapor": "string",
-  "lampiran": "file"
+  "nama_pelapor": "string (optional)",
+  "jenis_kelamin": "Laki-laki|Perempuan (optional)",
+  "nim": "string (optional)",
+  "whatsapp": "string (optional)",
+  "email_pelapor": "string (optional)",
+  "lampiran": "file (optional)"
 }
 ```
+
 **Response (201):**
+
 ```json
 {
   "status": "success",
@@ -121,8 +138,20 @@ Berdasarkan analisis kode dalam workspace Anda, berikut adalah endpoint REST API
 }
 ```
 
+**Response (403 - User Inactive):**
+
+```json
+{
+  "status": "error",
+  "message": "Akun Anda tidak aktif. Silakan hubungi admin.",
+  "code": "ACCOUNT_INACTIVE"
+}
+```
+
 #### `GET /api/complaints/{id}`
+
 **Response (200):**
+
 ```json
 {
   "status": "success",
@@ -148,13 +177,17 @@ Berdasarkan analisis kode dalam workspace Anda, berikut adalah endpoint REST API
 ```
 
 #### `PUT /api/complaints/{id}/status` (Admin only)
+
 **Request:**
+
 ```json
 {
   "status": "Baru|Diproses|Selesai|Ditolak"
 }
 ```
+
 **Response (200):**
+
 ```json
 {
   "status": "success",
@@ -170,7 +203,9 @@ Berdasarkan analisis kode dalam workspace Anda, berikut adalah endpoint REST API
 ### **3. User Management Endpoints**
 
 #### `GET /api/users/me`
+
 **Response (200):**
+
 ```json
 {
   "status": "success",
@@ -187,7 +222,9 @@ Berdasarkan analisis kode dalam workspace Anda, berikut adalah endpoint REST API
 ```
 
 #### `GET /api/users/me/complaints`
+
 **Response (200):**
+
 ```json
 {
   "status": "success",
@@ -208,7 +245,9 @@ Berdasarkan analisis kode dalam workspace Anda, berikut adalah endpoint REST API
 ```
 
 #### `GET /api/admin/users` (Admin only)
+
 **Response (200):**
+
 ```json
 {
   "status": "success",
@@ -230,7 +269,9 @@ Berdasarkan analisis kode dalam workspace Anda, berikut adalah endpoint REST API
 ```
 
 #### `DELETE /api/admin/users/{id}` (Admin only)
+
 **Response (200):**
+
 ```json
 {
   "status": "success",
@@ -241,7 +282,9 @@ Berdasarkan analisis kode dalam workspace Anda, berikut adalah endpoint REST API
 ### **4. Categories Endpoint**
 
 #### `GET /api/categories`
+
 **Response (200):**
+
 ```json
 {
   "status": "success",
@@ -254,7 +297,7 @@ Berdasarkan analisis kode dalam workspace Anda, berikut adalah endpoint REST API
       },
       {
         "id": 2,
-        "name": "Akademik", 
+        "name": "Akademik",
         "description": "Pengaduan terkait kegiatan akademik"
       }
     ]
@@ -265,7 +308,9 @@ Berdasarkan analisis kode dalam workspace Anda, berikut adalah endpoint REST API
 ### **5. Dashboard/Statistics Endpoints**
 
 #### `GET /api/admin/dashboard` (Admin only)
+
 **Response (200):**
+
 ```json
 {
   "status": "success",
@@ -300,6 +345,7 @@ Berdasarkan analisis kode dalam workspace Anda, berikut adalah endpoint REST API
 ### **6. Error Response Format**
 
 Semua error menggunakan format standar:
+
 ```json
 {
   "status": "error",
@@ -312,6 +358,7 @@ Semua error menggunakan format standar:
 ```
 
 **HTTP Status Codes:**
+
 - `200` - Success
 - `201` - Created
 - `400` - Bad Request

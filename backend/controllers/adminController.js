@@ -114,14 +114,6 @@ class AdminController {
         });
       }
 
-      if (user.id === req.user.id) {
-        return res.status(403).json({
-          status: "error",
-          message: "Cannot deactivate yourself",
-          code: "CANNOT_DEACTIVATE_SELF",
-        });
-      }
-
       if (user.role === "admin") {
         return res.status(403).json({
           status: "error",
@@ -161,13 +153,7 @@ class AdminController {
 
       // Get complaints by status
       const complaintsByStatus = await Complaint.findAll({
-        attributes: [
-          "status",
-          [
-            Category.sequelize.fn("COUNT", Category.sequelize.col("status")),
-            "count",
-          ],
-        ],
+        attributes: ["status", [Category.sequelize.fn("COUNT", Category.sequelize.col("status")), "count"]],
         group: ["status"],
         raw: true,
       });
@@ -176,13 +162,7 @@ class AdminController {
       const complaintsByCategory = await Complaint.findAll({
         attributes: [
           [Category.sequelize.col("category.name"), "category"],
-          [
-            Category.sequelize.fn(
-              "COUNT",
-              Category.sequelize.col("Complaint.id")
-            ),
-            "count",
-          ],
+          [Category.sequelize.fn("COUNT", Category.sequelize.col("Complaint.id")), "count"],
         ],
         include: [
           {
