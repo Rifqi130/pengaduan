@@ -1,0 +1,375 @@
+###
+# Student Complaint System - API Testing Requests
+# Base URL: http://localhost:3000
+###
+
+@baseUrl = http://localhost:3000
+@contentType = application/json
+
+# Variables for testing (will be set during execution)
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsInVzZXJuYW1lIjoiYWRtaW4xMjMiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NDkzNjAyMzgsImV4cCI6MTc0OTk2NTAzOH0.cDjZqFKeNYlvT_I30fYLbaV8kJq_sP9KOWRvAldAhg4
+@userId = 
+@complaintId = 
+
+###
+# ============================================================================
+# 1. HEALTH CHECK
+# ============================================================================
+
+### Health Check
+GET {{baseUrl}}/api/health
+
+###
+# ============================================================================
+# 2. AUTHENTICATION ENDPOINTS
+# ============================================================================
+
+### Register New Student
+POST {{baseUrl}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "testuser123",
+  "email": "testuser123@example.com",
+  "password": "password123"
+}
+
+### Register New Admin
+POST {{baseUrl}}/api/auth/register/admin
+Content-Type: {{contentType}}
+
+{
+  "username": "admin123",
+  "email": "admin123@example.com",
+  "password": "password123"
+}
+
+### Login as Student
+# @name loginStudent
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "afifjam",
+  "password": "afifjam",
+  "role": "mahasiswa"
+}
+
+### Login as Admin
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "admin123",
+  "password": "password123",
+  "role": "admin"
+}
+
+### Logout
+POST {{baseUrl}}/api/auth/logout
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+###
+# ============================================================================
+# 3. CATEGORIES ENDPOINTS
+# ============================================================================
+
+### Get All Categories
+GET {{baseUrl}}/api/categories
+
+###
+# ============================================================================
+# 4. COMPLAINT ENDPOINTS
+# ============================================================================
+
+### Get All Complaints (Public - No Auth)
+GET {{baseUrl}}/api/complaints
+
+### Get All Complaints with Filters
+GET {{baseUrl}}/api/complaints?type=public&status=Baru&category=Fasilitas
+
+### Get All Complaints (Authenticated)
+GET {{baseUrl}}/api/complaints
+Authorization: Bearer {{token}}
+
+### Submit Anonymous Complaint (No Data Diri)
+POST {{baseUrl}}/api/complaints
+Content-Type: {{contentType}}
+
+{
+  "title": "Pengaduan Anonim Test",
+  "description": "Ini adalah pengaduan anonim untuk testing API",
+  "category": "Fasilitas",
+  "tanggal_kejadian": "2025-01-15",
+  "lokasi_kejadian": "Gedung A Lantai 1",
+  "tipe_aduan": "public",
+  "sertakan_data_diri": false
+}
+
+### Submit Complaint with Personal Data
+POST {{baseUrl}}/api/complaints
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "title": "Pengaduan dengan Data Diri",
+  "description": "Ini adalah pengaduan lengkap dengan data diri pelapor untuk testing API",
+  "category": "Akademik",
+  "tanggal_kejadian": "2025-01-15",
+  "lokasi_kejadian": "Ruang Kuliah B.201",
+  "tipe_aduan": "private",
+  "sertakan_data_diri": true,
+  "nama_pelapor": "Test User API",
+  "jenis_kelamin": "Laki-laki",
+  "nim": "202312345",
+  "whatsapp": "081234567890",
+  "email_pelapor": "testuser@example.com"
+}
+
+### Submit Complaint with File Upload (multipart/form-data)
+POST {{baseUrl}}/api/complaints
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="title"
+
+Pengaduan dengan Lampiran
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="description"
+
+Ini adalah pengaduan dengan lampiran file untuk testing API
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="category"
+
+Fasilitas
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="tanggal_kejadian"
+
+2025-01-15
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="lokasi_kejadian"
+
+Lab Komputer 1
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="tipe_aduan"
+
+public
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="sertakan_data_diri"
+
+true
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="nama_pelapor"
+
+Test User dengan File
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="lampiran"; filename="test-document.txt"
+Content-Type: text/plain
+
+Ini adalah contoh file lampiran untuk testing.
+Berisi bukti atau dokumentasi terkait pengaduan.
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Get Specific Complaint by ID (Public)
+GET {{baseUrl}}/api/complaints/1
+
+### Get Specific Complaint by ID (Authenticated)
+GET {{baseUrl}}/api/complaints/{{complaintId}}
+Authorization: Bearer {{token}}
+
+### Update Complaint Status (Admin Only)
+PUT {{baseUrl}}/api/complaints/1/status
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "status": "Diproses"
+}
+
+### Update Complaint Status to Completed (Admin Only)
+PUT {{baseUrl}}/api/complaints/1/status
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "status": "Selesai"
+}
+
+### Update Complaint Status to Rejected (Admin Only)
+PUT {{baseUrl}}/api/complaints/1/status
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "status": "Ditolak"
+}
+
+### Delete Complaint (Admin Only)
+DELETE {{baseUrl}}/api/complaints/1
+Authorization: Bearer {{token}}
+
+### Delete Specific Complaint by ID (Admin Only)
+DELETE {{baseUrl}}/api/complaints/13
+Authorization: Bearer {{token}}
+
+###
+# ============================================================================
+# 5. USER MANAGEMENT ENDPOINTS
+# ============================================================================
+
+### Get Current User Profile
+GET {{baseUrl}}/api/users/me
+Authorization: Bearer {{token}}
+
+### Get Current User's Complaints
+GET {{baseUrl}}/api/users/me/complaints
+Authorization: Bearer {{token}}
+
+### Get Current User's Complaints with Filters
+GET {{baseUrl}}/api/users/me/complaints?status=Baru&category=Fasilitas
+Authorization: Bearer {{token}}
+
+###
+# ============================================================================
+# 6. ADMIN ENDPOINTS
+# ============================================================================
+
+### Get Admin Dashboard Statistics
+GET {{baseUrl}}/api/admin/dashboard
+Authorization: Bearer {{token}}
+
+### Get All Users (Admin Only)
+GET {{baseUrl}}/api/admin/users
+Authorization: Bearer {{token}}
+
+### Get Users with Role Filter (Admin Only)
+GET {{baseUrl}}/api/admin/users?role=mahasiswa
+Authorization: Bearer {{token}}
+
+### Delete User (Admin Only) - Cannot delete admin users
+DELETE {{baseUrl}}/api/admin/users/{{userId}}
+Authorization: Bearer {{token}}
+
+### Update User Status (Admin Only)
+PUT {{baseUrl}}/api/admin/users/1/status
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "is_active": false
+}
+
+###
+# ============================================================================
+# 7. ERROR TESTING
+# ============================================================================
+
+### Test 404 - Invalid Endpoint
+GET {{baseUrl}}/api/invalid-endpoint
+
+### Test 401 - No Authorization
+GET {{baseUrl}}/api/users/me
+
+### Test 401 - Invalid Token
+GET {{baseUrl}}/api/users/me
+Authorization: Bearer invalid_token_here
+
+### Test 403 - Student Accessing Admin Endpoint
+GET {{baseUrl}}/api/admin/dashboard
+Authorization: Bearer {{token}}
+
+### Test 422 - Validation Error (Missing Required Fields)
+POST {{baseUrl}}/api/complaints
+Content-Type: {{contentType}}
+
+{
+  "title": "",
+  "description": "",
+  "category": "InvalidCategory"
+}
+
+### Test 422 - Registration with Invalid Data
+POST {{baseUrl}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "ab",
+  "email": "invalid-email",
+  "password": "123"
+}
+
+### Test 422 - Login with Missing Fields
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "",
+  "password": ""
+}
+
+### Test 400 - Invalid Complaint Status Update
+PUT {{baseUrl}}/api/complaints/1/status
+Content-Type: {{contentType}}
+Authorization: Bearer {{token}}
+
+{
+  "status": "InvalidStatus"
+}
+
+###
+# ============================================================================
+# 9. FILE ACCESS TEST
+# ============================================================================
+
+### Access Uploaded File (if exists)
+GET {{baseUrl}}/uploads/complaints/sample-file.jpg
+
+###
+# ============================================================================
+# 10. CURL EXAMPLES (for command line testing)
+# ============================================================================
+
+### Example: Register via curl
+# curl -X POST http://localhost:3000/api/auth/register \
+#   -H "Content-Type: application/json" \
+#   -d '{"username":"curluser","email":"curl@example.com","password":"password123"}'
+
+### Example: Login via curl
+# curl -X POST http://localhost:3000/api/auth/login \
+#   -H "Content-Type: application/json" \
+#   -d '{"username":"mahasiswa1","password":"pass123","role":"mahasiswa"}'
+
+### Example: Get complaints via curl
+# curl -X GET http://localhost:3000/api/complaints \
+#   -H "Authorization: Bearer YOUR_TOKEN_HERE"
+
+### Example: Submit complaint via curl
+# curl -X POST http://localhost:3000/api/complaints \
+#   -H "Content-Type: application/json" \
+#   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+#   -d '{"title":"Test via curl","description":"Testing from command line","category":"Fasilitas","tanggal_kejadian":"2025-01-15","lokasi_kejadian":"Test Location","tipe_aduan":"public","sertakan_data_diri":false}'
+
+### Example: File upload via curl
+# curl -X POST http://localhost:3000/api/complaints \
+#   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+#   -F "title=Test with File" \
+#   -F "description=Testing file upload" \
+#   -F "category=Fasilitas" \
+#   -F "tanggal_kejadian=2025-01-15" \
+#   -F "lokasi_kejadian=Test Location" \
+#   -F "tipe_aduan=public" \
+#   -F "sertakan_data_diri=false" \
+#   -F "lampiran=@/path/to/your/file.jpg"
+
+###
+# ============================================================================
+# NOTES:
+# 1. Replace {{token}} with actual JWT token from login response
+# 2. Replace {{token}} with admin JWT token from admin login
+# 3. Replace {{userId}} with actual user ID for deletion tests
+# 4. Replace {{complaintId}} with actual complaint ID
+# 5. Make sure backend server is running on http://localhost:3000
+# 6. Database should be set up with sample data from create_database.sql
+# ============================================================================
