@@ -17,7 +17,7 @@ class ApiClient
     {
         $this->baseUrl = rtrim($baseUrl ?: API_BASE_URL, '/');
         $this->pgBaseUrl = rtrim($pgBaseUrl ?: PG_API_BASE_URL, '/');
-        $this->timeout = 30; // 30 seconds timeout
+        $this->timeout = 60; // Increased timeout for GCP
         $this->userAgent = 'StudentComplaintSystem/1.0 PHP Client';
     }
 
@@ -28,18 +28,25 @@ class ApiClient
     {
         $url = $this->baseUrl . '/' . ltrim($endpoint, '/');
 
+        // Debug logging for GCP
+        if (defined('DEBUG_MODE') && DEBUG_MODE) {
+            error_log("API Request: {$method} {$url}");
+        }
+
         // Initialize cURL
         $ch = curl_init();
 
-        // Set basic cURL options
+        // Set basic cURL options - Updated for GCP
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => $this->timeout,
+            CURLOPT_CONNECTTIMEOUT => 30, // Added for GCP
             CURLOPT_USERAGENT => $this->userAgent,
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_MAXREDIRS => 3,
             CURLOPT_SSL_VERIFYPEER => false, // For development only
+            CURLOPT_SSL_VERIFYHOST => false, // For development only
             CURLOPT_HTTPHEADER => array_merge([
                 'Content-Type: application/json',
                 'Accept: application/json'
@@ -74,6 +81,14 @@ class ApiClient
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
         curl_close($ch);
+
+        // Debug logging for GCP
+        if (defined('DEBUG_MODE') && DEBUG_MODE) {
+            error_log("API Response Code: {$httpCode}");
+            if ($error) {
+                error_log("API cURL Error: {$error}");
+            }
+        }
 
         // Handle cURL errors
         if ($error) {

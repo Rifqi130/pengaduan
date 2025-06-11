@@ -4,14 +4,14 @@
  * Adjust these settings based on your environment
  */
 
-// API Configuration - MySQL Server (Main)
-define('API_BASE_URL', 'http://localhost:3000/api');
+// API Configuration - MySQL Server (Main) - Update for GCP deployment
+define('API_BASE_URL', 'http://34.121.164.196:3000/api');
 
-// API Configuration - PostgreSQL Server (Analytics/Logs)
-define('PG_API_BASE_URL', 'http://localhost:3001/api');
+// API Configuration - PostgreSQL Server (Analytics/Logs) - Update for GCP deployment
+define('PG_API_BASE_URL', 'http://34.121.164.196:3001/api');
 
-// Frontend Configuration
-define('FRONTEND_BASE_URL', 'http://localhost:8080');
+// Frontend Configuration - Update for GCP deployment
+define('FRONTEND_BASE_URL', 'http://34.121.164.196/pengaduan/frontend');
 
 // Upload Configuration
 define('UPLOAD_MAX_SIZE', 5 * 1024 * 1024); // 5MB in bytes
@@ -28,8 +28,14 @@ if (session_status() === PHP_SESSION_NONE) {
 if (getenv('ENV') === 'development') {
     error_reporting(E_ALL);
     ini_set('display_errors', 1);
+} else {
+    error_reporting(0);
+    ini_set('display_errors', 0);
 }
 
 // Timezone
 date_default_timezone_set('Asia/Jakarta');
+
+// Debug mode for GCP deployment
+define('DEBUG_MODE', true);
 ?>

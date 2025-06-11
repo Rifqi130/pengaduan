@@ -18,21 +18,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tipe_aduan = $_POST['tipe_aduan'] ?? 'private';
 
     // Ambil daftar kategori dari database (tanpa di-lowercase)
-    $categories = array_map(function($cat) {
-        $name = is_array($cat) ? ($cat['name'] ?? '') : (string)$cat;
-        return $name;
-    }, getCategories());
+    $categories = getCategories();
+    
+    // Debug untuk GCP deployment
+    if (defined('DEBUG_MODE') && DEBUG_MODE) {
+        error_log("Available categories: " . json_encode($categories));
+    }
 
     // Validasi kategori (case-insensitive)
     $category_valid = false;
-    foreach ($categories as $cat) {
-        if (strcasecmp($cat, $category) === 0) {
-            $category_valid = true;
-            break;
+    if (!empty($categories)) {
+        foreach ($categories as $cat) {
+            $categoryName = is_array($cat) ? ($cat['name'] ?? '') : (string)$cat;
+            if (strcasecmp($categoryName, $category) === 0) {
+                $category_valid = true;
+                break;
+            }
         }
     }
+    
     if (!$category_valid) {
-        $submit_error_message = 'Gagal mengirim pengaduan: Invalid category';
+        $submit_error_message = 'Gagal mengirim pengaduan: Invalid category. Available categories: ' . 
+                               implode(', ', array_map(function($cat) {
+                                   return is_array($cat) ? ($cat['name'] ?? '') : (string)$cat;
+                               }, $categories));
     } else if (
         $tanggal_kejadian && $lokasi_kejadian && $title && $description && $category &&
         (!$sertakan_data_diri || ($sertakan_data_diri && $nama_pelapor && $email_pelapor))
@@ -129,17 +138,24 @@ else: ?>
                                     <?php
                                     $categories = getCategories();
                                     if (empty($categories)) {
-                                        echo '<option value="" disabled>Tidak ada kategori tersedia</option>';
+                                        echo '<option value="" disabled>Tidak ada kategori tersedia - Periksa koneksi backend</option>';
                                     } else {
                                         foreach ($categories as $cat) {
                                             $categoryName = is_array($cat) ? ($cat['name'] ?? '') : (string)$cat;
+                                            $categoryId = is_array($cat) ? ($cat['id'] ?? '') : '';
                                             if (!empty($categoryName)) {
-                                                echo "<option value='" . htmlspecialchars($categoryName) . "'>" . htmlspecialchars($categoryName) . "</option>";
+                                                echo "<option value='" . htmlspecialchars($categoryName) . "' data-id='" . htmlspecialchars($categoryId) . "'>" . htmlspecialchars($categoryName) . "</option>";
                                             }
                                         }
                                     }
                                     ?>
                                 </select>
+                                <div class="form-text">
+                                    <small class="text-muted">
+                                        Backend Status: 
+                                        <span id="backend-status" class="badge bg-secondary">Checking...</span>
+                                    </small>
+                                </div>
                             </div>
                             <div class="col-md-6 mb-4">
                                 <label for="lampiran" class="form-label">
@@ -280,6 +296,31 @@ else: ?>
     </div>
 
     <script>
+        // Check backend status on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkBackendStatus();
+        });
+
+        function checkBackendStatus() {
+            const statusElement = document.getElementById('backend-status');
+            
+            fetch('<?php echo API_BASE_URL; ?>/health')
+                .then(response => {
+                    if (response.ok) {
+                        statusElement.textContent = 'Connected';
+                        statusElement.className = 'badge bg-success';
+                    } else {
+                        statusElement.textContent = 'Error';
+                        statusElement.className = 'badge bg-danger';
+                    }
+                })
+                .catch(error => {
+                    statusElement.textContent = 'Offline';
+                    statusElement.className = 'badge bg-danger';
+                    console.error('Backend check failed:', error);
+                });
+        }
+
         document.getElementById('sertakan_data_diri').addEventListener('change', function () {
             document.getElementById('data_diri_fields').style.display = this.checked ? 'block' : 'none';
         });

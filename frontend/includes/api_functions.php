@@ -324,30 +324,39 @@ function getCategories()
 {
     global $apiClient;
 
-    $response = $apiClient->getCategories();
+    try {
+        $response = $apiClient->getCategories();
 
-    if ($response['status_code'] === 200) {
-        $categories = $response['data']['data']['categories'] ?? [];
-        // Jika API mengembalikan array kosong, fallback ke default
-        if (empty($categories)) {
-            return [
-                ['name' => 'Fasilitas'],
-                ['name' => 'Akademik'],
-                ['name' => 'Layanan'],
-                ['name' => 'Keuangan'],
-                ['name' => 'Lainnya']
-            ];
+        if ($response['status_code'] === 200) {
+            $categories = $response['data']['data']['categories'] ?? [];
+            
+            // Debug logging for GCP deployment
+            if (defined('DEBUG_MODE') && DEBUG_MODE) {
+                error_log("Categories API Response: " . json_encode($categories));
+            }
+            
+            // Jika API mengembalikan array kosong, fallback ke default
+            if (empty($categories)) {
+                return getDefaultCategories();
+            }
+            return $categories;
         }
-        return $categories;
+    } catch (Exception $e) {
+        error_log("Categories API Error: " . $e->getMessage());
     }
 
     // Fallback ke hardcoded jika API gagal
+    return getDefaultCategories();
+}
+
+function getDefaultCategories()
+{
     return [
-        ['name' => 'Fasilitas'],
-        ['name' => 'Akademik'],
-        ['name' => 'Layanan'],
-        ['name' => 'Keuangan'],
-        ['name' => 'Lainnya']
+        ['id' => 1, 'name' => 'Fasilitas', 'description' => 'Pengaduan terkait fasilitas kampus'],
+        ['id' => 2, 'name' => 'Akademik', 'description' => 'Pengaduan terkait kegiatan akademik'],
+        ['id' => 3, 'name' => 'Layanan', 'description' => 'Pengaduan terkait layanan kampus'],
+        ['id' => 4, 'name' => 'Keuangan', 'description' => 'Pengaduan terkait keuangan dan pembayaran'],
+        ['id' => 5, 'name' => 'Lainnya', 'description' => 'Pengaduan kategori lainnya']
     ];
 }
 
@@ -415,8 +424,8 @@ function getFileUrl($filename) {
         return null;
     }
     
-    // Use the backend API file serving endpoint
-    $baseUrl = 'http://localhost:3000'; // Sesuaikan dengan URL backend Anda
+    // Use the backend API file serving endpoint - Update for GCP
+    $baseUrl = 'http://34.121.164.196:3000'; // Sesuaikan dengan URL backend GCP Anda
     return $baseUrl . '/api/files/attachment/' . urlencode($filename);
 }
 
